@@ -172,6 +172,10 @@ class InteractiveKaleidoApp:
             self._space.canvas_points_to_slot_local_pt(poly, slot_index=0)
             for poly in all_polys
         ]
+        slot_center = self._space.canvas_points_to_slot_local_pt(
+            [self.cfg.center], slot_index=0
+        )[0]
+        export_cfg = replace(self.cfg, center=slot_center)
         export_composition_bundle(
             slot_polys,
             out_dir,
@@ -181,7 +185,7 @@ class InteractiveKaleidoApp:
             gutter_pt=self.gutter_pt,
             dpi=150,
             include_pdf=(fmt == "pdf"),
-            config=self.cfg,
+            config=export_cfg,
             budget_config=self.budget_cfg,
             cache=self.cache,
         )

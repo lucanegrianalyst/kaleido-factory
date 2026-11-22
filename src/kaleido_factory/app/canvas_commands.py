@@ -14,7 +14,7 @@ from kaleido_factory.layout.formats import make_book_page
 HELP_TEXT = (
     "Comandi: sectors <n> | mirror <on|off> | effect <none|neon|shading|writing> | "
     "echo <n> [scale stroke] | spacing <px> | width <px> | smooth <p> [w] | subdiv <i> [r] | "
-    "center <x> <y> | page <fmt> [orient] | grid <r> <c> [gutter] | budget <full_quality|fast_preview> | "
+    "guide <on|off> | center <x> <y> | page <fmt> [orient] | grid <r> <c> [gutter] | budget <full_quality|fast_preview> | "
     "save_preset <nome> | load_preset <nome> | presets | undo | clear | export <svg|png|pdf> [dir]"
 )
 
@@ -105,6 +105,9 @@ def parse_command(
         iters = int(args[0])
         ratio = float(args[1]) if len(args) == 2 else cfg.corner_ratio
         return replace(cfg, subdivisions=iters, corner_ratio=ratio), f"Suddivisione: {iters} iterazioni (ratio={ratio}).", None
+    if cmd == "guide" and len(args) == 1 and args[0].lower() in ("on", "off", "true", "false", "1", "0"):
+        flag = args[0].lower() in ("on", "true", "1")
+        return cfg, f"Guida pagina/slot {'visibile' if flag else 'nascosta'}.", f"set_guide:{'1' if flag else '0'}"
     if cmd == "center" and len(args) == 2:
         cx, cy = float(args[0]), float(args[1])
         return replace(cfg, center=(cx, cy)), f"Centro simmetria impostato a ({cx:.1f}, {cy:.1f}).", None

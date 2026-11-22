@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from kaleido_factory.app.canvas_commands import HELP_TEXT, parse_command
+from kaleido_factory.app.canvas_page_overlay import compute_page_guide_layout, draw_page_guide
 from kaleido_factory.app.facade import build_all_styled_strokes, export_composition_bundle
 from kaleido_factory.app.pipeline import CompositionConfig
 from kaleido_factory.core.cache import ParameterCache
@@ -30,6 +31,7 @@ class InteractiveKaleidoApp:
         self.rows: int = 1
         self.cols: int = 1
         self.gutter_pt: float = 12.0
+        self.show_page_guide: bool = True
         self.budget_cfg = BudgetConfig(mode="full_quality")
         self.presets_dir: Path = Path("presets")
         self.history: list[str] = []
@@ -113,6 +115,9 @@ class InteractiveKaleidoApp:
         elif special.startswith("set_page:"):
             _, fmt_name, orient = special.split(":", 2)
             self.page = make_book_page(fmt_name, orientation=orient, margins=MarginsSpec(36, 36, 36, 36))
+        elif special.startswith("set_guide:"):
+            _, flag_s = special.split(":", 1)
+            self.show_page_guide = flag_s == "1"
         elif special.startswith("set_grid:"):
             _, r_s, c_s, g_s = special.split(":", 3)
             self.rows, self.cols, self.gutter_pt = int(r_s), int(c_s), float(g_s)
@@ -184,6 +189,18 @@ class InteractiveKaleidoApp:
 
     def redraw(self) -> None:
         self.canvas.delete("all")
+        if self.show_page_guide:
+            cw = float(self.canvas.winfo_width() or self.canvas.cget("width"))
+            ch = float(self.canvas.winfo_height() or self.canvas.cget("height"))
+            guide = compute_page_guide_layout(
+                self.page,
+                canvas_width=cw,
+                canvas_height=ch,
+                rows=self.rows,
+                cols=self.cols,
+                gutter_pt=self.gutter_pt,
+            )
+            draw_page_guide(self.canvas, guide)
         cx, cy = self.cfg.center
         self.canvas.create_oval(cx - 3, cy - 3, cx + 3, cy + 3, fill="#cc3333", outline="")
 

@@ -134,7 +134,8 @@ def parse_command(
         return cfg, f"Preset disponibili: {label}", None
     if cmd == "export" and len(args) in (1, 2):
         fmt = args[0].lower()
-        target = args[1] if len(args) == 2 else str(Path("output/canvas_export"))
+        default_dir = Path(__file__).resolve().parents[3] / "output" / "canvas_export"
+        target = str(Path(args[1])) if len(args) == 2 else str(default_dir)
         return cfg, f"Esportazione {fmt} verso {target}...", f"export:{fmt}:{target}"
 
     raise ValueError(f"Comando non riconosciuto o argomenti non validi: '{raw}'")

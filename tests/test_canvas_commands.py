@@ -1,5 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
+from pathlib import Path
 import pytest
 
 from kaleido_factory.app.canvas_commands import parse_command
@@ -19,3 +20,12 @@ def test_parse_command_unknown_raises_value_error() -> None:
     cfg = CompositionConfig()
     with pytest.raises(ValueError):
         parse_command("comando_inesistente", cfg)
+
+
+def test_export_command_uses_project_output_root() -> None:
+    cfg = CompositionConfig()
+    _, _, special = parse_command("export pdf", cfg)
+    assert special is not None and special.startswith("export:pdf:")
+    target = Path(special.split(":", 2)[2])
+    assert target.is_absolute()
+    assert target.parts[-2:] == ("output", "canvas_export")

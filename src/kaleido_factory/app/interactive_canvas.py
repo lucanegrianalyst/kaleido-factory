@@ -141,11 +141,21 @@ class InteractiveKaleidoApp:
             self._apply_special(special)
             if special and special.startswith("export:"):
                 _, fmt, target = special.split(":", 2)
-                msg = f"Esportato ({fmt}) in {target} [identico a preview]."
-            self.status_var.set(msg)
+                exported_count = self._count_exported_files(Path(target), fmt)
+                msg = f"Esportato ({fmt}, {exported_count} file) in {target} [1:1 preview/export]."
+            eff_label = ",".join(self.cfg.effects) if self.cfg.effects else "base"
+            mirror_label = "on" if self.cfg.mirror else "off"
+            summary = f" | [sec={self.cfg.sectors} mir={mirror_label} eff={eff_label} tratti={len(self.strokes_raw)}]"
+            self.status_var.set(msg + summary)
             self.redraw()
         except Exception as exc:  # noqa: BLE001
-            self.status_var.set(f"Errore: {exc}")
+            self.status_var.set(f"[Errore comando] {exc}")
+
+    def _count_exported_files(self, out_dir: Path, fmt: str) -> int:
+        if not out_dir.exists():
+            return 0
+        exts = {".svg", ".png", ".pdf"} if fmt == "pdf" else {".svg", ".png"}
+        return sum(1 for p in out_dir.iterdir() if p.is_file() and p.suffix.lower() in exts)
 
     def _run_export(self, fmt: str, out_dir: Path) -> None:
         all_polys = self._active_polylines()

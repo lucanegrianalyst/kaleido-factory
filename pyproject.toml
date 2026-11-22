@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kaleido_factory"
+version = "0.1.0"
+description = "Sistema modulare per composizioni kaleidoscopiche, impaginazione editoriale ed export con parita visiva."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "numpy>=1.26", "pillow>=10.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

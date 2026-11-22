@@ -1,12 +1,5 @@
-# Guida Pagina e Slot sul Canvas
+# Guida Pagina, Slot e Spazio Coordinate (`CanvasPageSpace`)
 
-Il modulo `src/kaleido_factory/app/canvas_page_overlay.py` mostra sul canvas un riferimento proporzionato di **pagina** e **slot di impaginazione** (`PlacedSlot`), così puoi valutare l'ingombro del disegno rispetto all'esportazione.
-
-## Caratteristiche architetturali
-- **Scollegabile**: non altera la geometria dei tratti né il flusso di `export_composition_bundle`. Tutti gli elementi grafici usano il tag `page_guide` e vengono rimossi/ridisegnati in isolamento.
-- **Modificabile e divisibile**: il calcolo geometrico (`compute_page_guide_layout`) è separato dal rendering Tkinter (`draw_page_guide`).
-
-## Comandi
-- `guide on` — mostra i contorni di pagina e slot.
-- `guide off` — nasconde i contorni guida.
-- `page <fmt> [orient]` / `grid <r> <c> [gutter]` — aggiorna in tempo reale la guida al formato e alla griglia correnti.
+- **`src/kaleido_factory/app/canvas_page_space.py`**: definisce la mappatura tra coordinate canvas (`px`) e coordinate reali di pagina/slot (`pt`) per qualunque formato (`PageSpec`) e griglia (`rows`, `cols`, `gutter_pt`), senza rimpicciolire tratti che escono dal foglio o dallo slot.
+- **`src/kaleido_factory/app/canvas_page_overlay.py`**: disegna il bordo del foglio e degli slot usando il tag isolato `page_guide` (attivabile/disattivabile con `guide on` / `guide off`).
+- **`src/kaleido_factory/app/facade.py`**: allinea i tratti alle coordinate locali dello slot (`pt`) mantenendo le proporzioni reali.

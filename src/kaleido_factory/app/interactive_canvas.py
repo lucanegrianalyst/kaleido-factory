@@ -7,7 +7,8 @@ import tkinter as tk
 from tkinter import ttk
 
 from kaleido_factory.app.canvas_commands import HELP_TEXT, parse_command
-from kaleido_factory.app.canvas_page_overlay import compute_page_guide_layout, draw_page_guide
+from kaleido_factory.app.canvas_page_overlay import draw_page_guide
+from kaleido_factory.app.canvas_page_space import CanvasPageSpace, build_canvas_page_space
 from kaleido_factory.app.facade import build_all_styled_strokes, export_composition_bundle
 from kaleido_factory.app.pipeline import CompositionConfig
 from kaleido_factory.core.cache import ParameterCache
@@ -32,6 +33,7 @@ class InteractiveKaleidoApp:
         self.cols: int = 1
         self.gutter_pt: float = 12.0
         self.show_page_guide: bool = True
+        self._space: CanvasPageSpace = build_canvas_page_space(self.page, canvas_width=width, canvas_height=height - 76, rows=self.rows, cols=self.cols, gutter_pt=self.gutter_pt)
         self.budget_cfg = BudgetConfig(mode="full_quality")
         self.presets_dir: Path = Path("presets")
         self.history: list[str] = []
@@ -166,8 +168,12 @@ class InteractiveKaleidoApp:
         all_polys = self._active_polylines()
         if not all_polys:
             raise ValueError("Nessun tratto da esportare.")
+        slot_polys = [
+            self._space.canvas_points_to_slot_local_pt(poly, slot_index=0)
+            for poly in all_polys
+        ]
         export_composition_bundle(
-            all_polys,
+            slot_polys,
             out_dir,
             page=self.page,
             rows=self.rows,
@@ -189,18 +195,18 @@ class InteractiveKaleidoApp:
 
     def redraw(self) -> None:
         self.canvas.delete("all")
+        cw = float(self.canvas.winfo_width() or self.canvas.cget("width"))
+        ch = float(self.canvas.winfo_height() or self.canvas.cget("height"))
+        self._space = build_canvas_page_space(
+            self.page,
+            canvas_width=cw,
+            canvas_height=ch,
+            rows=self.rows,
+            cols=self.cols,
+            gutter_pt=self.gutter_pt,
+        )
         if self.show_page_guide:
-            cw = float(self.canvas.winfo_width() or self.canvas.cget("width"))
-            ch = float(self.canvas.winfo_height() or self.canvas.cget("height"))
-            guide = compute_page_guide_layout(
-                self.page,
-                canvas_width=cw,
-                canvas_height=ch,
-                rows=self.rows,
-                cols=self.cols,
-                gutter_pt=self.gutter_pt,
-            )
-            draw_page_guide(self.canvas, guide)
+            draw_page_guide(self.canvas, self._space)
         cx, cy = self.cfg.center
         self.canvas.create_oval(cx - 3, cy - 3, cx + 3, cy + 3, fill="#cc3333", outline="")
 

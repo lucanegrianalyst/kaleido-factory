@@ -28,73 +28,56 @@ class ExportBundle:
     pdf_file: Path | None
 
 
-def _fit_strokes_to_slot(
+def _align_strokes_to_slot_origin(
     strokes: tuple[StyledStroke, ...],
-    width_pt: float,
-    height_pt: float,
-    pad_ratio: float = 0.9,
+    slot_x_pt: float,
+    slot_y_pt: float,
+    slot_w_pt: float,
+    slot_h_pt: float,
 ) -> tuple[StyledStroke, ...]:
-    """Scala e centra i tratti all'interno di uno slot (coordinate locali 0..width_pt, 0..height_pt)."""
+    """Porta i tratti in coordinate locali dello slot (pt) senza alterarli o rimpicciolirli."""
     pts_all = [pt for st in strokes for pt in st.points]
-    if len(pts_all) < 2 or width_pt <= 0.0 or height_pt <= 0.0:
+    if not pts_all:
         return strokes
 
-    xs = [p[0] for p in pts_all]
-    ys = [p[1] for p in pts_all]
-    min_x, max_x = min(xs), max(xs)
-    min_y, max_y = min(ys), max(ys)
-    span_x = max_x - min_x
-    span_y = max_y - min_y
+    min_x = min(p[0] for p in pts_all)
+    max_x = max(p[0] for p in pts_all)
+    min_y = min(p[1] for p in pts_all)
+    max_y = max(p[1] for p in pts_all)
 
-    target_w = max(1.0, width_pt * pad_ratio)
-    target_h = max(1.0, height_pt * pad_ratio)
-
-    needs_scale = span_x > target_w or span_y > target_h
-    scale = 1.0
-    if needs_scale:
-        sx = (target_w / span_x) if span_x > 1e-9 else 1.0
-        sy = (target_h / span_y) if span_y > 1e-9 else 1.0
-        scale = min(sx, sy)
-
-    out_of_slot = min_x < 0.0 or min_y < 0.0 or max_x > width_pt or max_y > height_pt
-    if not needs_scale and not out_of_slot:
+    # Se i tratti sono già espressi in coordinate locali dello slot, non traslarli ulteriormente.
+    already_local = (
+        min_x >= -slot_w_pt * 0.5
+        and max_x <= slot_w_pt * 1.5
+        and min_y >= -slot_h_pt * 0.5
+        and max_y <= slot_h_pt * 1.5
+    )
+    if already_local:
         return strokes
 
-    scaled_w = span_x * scale
-    scaled_h = span_y * scale
-    cx_src = (min_x + max_x) * 0.5
-    cy_src = (min_y + max_y) * 0.5
-    cx_dst = width_pt * 0.5
-    cy_dst = height_pt * 0.5
-
-    fitted: list[StyledStroke] = []
+    aligned: list[StyledStroke] = []
     for st in strokes:
-        new_pts = tuple(
-            (
-                cx_dst + (pt[0] - cx_src) * scale,
-                cy_dst + (pt[1] - cy_src) * scale,
-            )
-            for pt in st.points
-        )
-        new_w = max(0.25, st.width * scale) if needs_scale else st.width
-        fitted.append(replace(st, points=new_pts, width=new_w))
-    return tuple(fitted)
+        new_pts = tuple((p[0] - slot_x_pt, p[1] - slot_y_pt) for p in st.points)
+        aligned.append(replace(st, points=new_pts))
+    return tuple(aligned)
 
 
 def _paginate_fitted_strokes(
     layout: PaginatedLayout,
     strokes_by_item: list[tuple[StyledStroke, ...]],
 ) -> list[tuple[StyledStroke, ...]]:
-    fitted_by_item: list[tuple[StyledStroke, ...]] = list(strokes_by_item)
+    aligned_by_item: list[tuple[StyledStroke, ...]] = list(strokes_by_item)
     for lpage in layout.pages:
         for slot in lpage.slots:
-            if 0 <= slot.item_index < len(fitted_by_item):
-                fitted_by_item[slot.item_index] = _fit_strokes_to_slot(
-                    fitted_by_item[slot.item_index],
+            if 0 <= slot.item_index < len(aligned_by_item):
+                aligned_by_item[slot.item_index] = _align_strokes_to_slot_origin(
+                    aligned_by_item[slot.item_index],
+                    slot.x_pt,
+                    slot.y_pt,
                     slot.width_pt,
                     slot.height_pt,
                 )
-    return fitted_by_item
+    return aligned_by_item
 
 
 def build_all_styled_strokes(

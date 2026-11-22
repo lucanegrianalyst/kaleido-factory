@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
@@ -144,6 +146,8 @@ class InteractiveKaleidoApp:
                 budget_mode=self.budget_cfg.mode,
                 presets_dir=self.presets_dir,
             )
+            if line.strip().lower().startswith("center "):
+                self._user_moved_center = True
             self.cfg = new_cfg
             self._apply_special(special)
             if special and special.startswith("export:"):
@@ -188,6 +192,7 @@ class InteractiveKaleidoApp:
             config=export_cfg,
             budget_config=self.budget_cfg,
             cache=self.cache,
+            single_page_group=(self.rows == 1 and self.cols == 1),
         )
 
     def _draw_styled_stroke(self, st: StyledStroke) -> None:
@@ -211,6 +216,9 @@ class InteractiveKaleidoApp:
         )
         if self.show_page_guide:
             draw_page_guide(self.canvas, self._space)
+        if not getattr(self, "_user_moved_center", False) and self._space.slot_rects_px:
+            sr = self._space.slot_rects_px[0]
+            self.cfg = replace(self.cfg, center=((sr.x0 + sr.x1) * 0.5, (sr.y0 + sr.y1) * 0.5))
         cx, cy = self.cfg.center
         self.canvas.create_oval(cx - 3, cy - 3, cx + 3, cy + 3, fill="#cc3333", outline="")
 

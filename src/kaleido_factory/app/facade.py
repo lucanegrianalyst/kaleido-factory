@@ -104,17 +104,23 @@ def compose_and_paginate(
     config: CompositionConfig | None = None,
     budget_config: BudgetConfig | None = None,
     cache: ParameterCache | None = None,
+    single_page_group: bool = False,
 ) -> tuple[PaginatedLayout, list[tuple[StyledStroke, ...]]]:
     """Genera i tratti stilizzati per ciascuna polilinea e calcola l'impaginazione."""
     target_page = page if page is not None else make_book_page("book_6x9", margins=MarginsSpec(36, 36, 36, 36))
-    strokes_by_item = build_all_styled_strokes(
+    per_poly_strokes = build_all_styled_strokes(
         polylines,
         config=config,
         budget_config=budget_config,
         cache=cache,
     )
+    if single_page_group and len(per_poly_strokes) > 1:
+        merged_strokes = tuple(st for group in per_poly_strokes for st in group)
+        strokes_by_item = [merged_strokes]
+    else:
+        strokes_by_item = per_poly_strokes
     layout = paginate_items(
-        len(polylines),
+        len(strokes_by_item),
         page=target_page,
         rows=rows,
         cols=cols,
@@ -137,6 +143,7 @@ def export_composition_bundle(
     config: CompositionConfig | None = None,
     budget_config: BudgetConfig | None = None,
     cache: ParameterCache | None = None,
+    single_page_group: bool = False,
 ) -> ExportBundle:
     """Esporta SVG, PNG e opzionalmente PDF usando lo stesso budget della preview."""
     active_budget = budget_config if budget_config is not None else BudgetConfig(mode="full_quality")
@@ -149,6 +156,7 @@ def export_composition_bundle(
         config=config,
         budget_config=active_budget,
         cache=cache,
+        single_page_group=single_page_group,
     )
     out_root = Path(output_dir)
     svg_paths = export_layout_svg(layout, strokes_by_item, out_root / "svg", prefix="kaleido")

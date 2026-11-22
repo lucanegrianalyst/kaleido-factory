@@ -54,3 +54,23 @@ def test_preview_and_export_produce_identical_strokes(tmp_path: Path) -> None:
         cache=cache,
     )
     assert bundle.pdf_file is not None and bundle.pdf_file.is_file()
+
+def test_single_page_group_keeps_separate_strokes_on_one_page(tmp_path: Path) -> None:
+    polys = [
+        [(10.0, 10.0), (30.0, 20.0)],
+        [(50.0, 50.0), (80.0, 70.0)],
+    ]
+    page = make_book_page("book_6x9", orientation="portrait", margins=MarginsSpec(36, 36, 36, 36))
+    bundle = export_composition_bundle(
+        polys,
+        tmp_path / "single_page_out",
+        page=page,
+        rows=1,
+        cols=1,
+        dpi=72,
+        include_pdf=True,
+        single_page_group=True,
+    )
+    assert bundle.layout.total_pages == 1
+    assert len(bundle.svg_files) == 1
+    assert bundle.png_files and len(bundle.png_files) == 1

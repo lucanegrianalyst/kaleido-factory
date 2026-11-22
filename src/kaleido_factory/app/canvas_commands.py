@@ -135,6 +135,8 @@ def parse_command(
         names = list_presets(p_dir)
         label = ", ".join(names) if names else "(nessuno)"
         return cfg, f"Preset disponibili: {label}", None
+    if cmd == "debug_pos" and len(args) == 0:
+        return cfg, "Debug posizioni...", "debug_pos"
     if cmd == "export" and len(args) in (1, 2):
         fmt = args[0].lower()
         default_dir = Path(__file__).resolve().parents[3] / "output" / "canvas_export"

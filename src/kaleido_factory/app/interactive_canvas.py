@@ -9,9 +9,10 @@ import tkinter as tk
 from tkinter import ttk
 
 from kaleido_factory.app.canvas_commands import HELP_TEXT, parse_command
+from kaleido_factory.app.canvas_export_helper import export_canvas_bundle, format_debug_pos
 from kaleido_factory.app.canvas_page_overlay import draw_page_guide
 from kaleido_factory.app.canvas_page_space import CanvasPageSpace, build_canvas_page_space
-from kaleido_factory.app.facade import build_all_styled_strokes, export_composition_bundle
+from kaleido_factory.app.facade import build_all_styled_strokes
 from kaleido_factory.app.pipeline import CompositionConfig
 from kaleido_factory.core.cache import ParameterCache
 from kaleido_factory.core.document import MarginsSpec, PageSpec
@@ -125,6 +126,8 @@ class InteractiveKaleidoApp:
         elif special.startswith("set_grid:"):
             _, r_s, c_s, g_s = special.split(":", 3)
             self.rows, self.cols, self.gutter_pt = int(r_s), int(c_s), float(g_s)
+        elif special == "debug_pos":
+            pass
         elif special.startswith("export:"):
             _, fmt, target = special.split(":", 2)
             self._run_export(fmt, Path(target))
@@ -150,6 +153,10 @@ class InteractiveKaleidoApp:
                 self._user_moved_center = True
             self.cfg = new_cfg
             self._apply_special(special)
+            if special == "debug_pos":
+                cw = float(self.canvas.winfo_width() or self.canvas.cget("width"))
+                ch = float(self.canvas.winfo_height() or self.canvas.cget("height"))
+                msg = format_debug_pos(self._space, self.cfg, cw, ch)
             if special and special.startswith("export:"):
                 _, fmt, target = special.split(":", 2)
                 exported_count = self._count_exported_files(Path(target), fmt)
@@ -169,30 +176,18 @@ class InteractiveKaleidoApp:
         return sum(1 for p in out_dir.iterdir() if p.is_file() and p.suffix.lower() in exts)
 
     def _run_export(self, fmt: str, out_dir: Path) -> None:
-        all_polys = self._active_polylines()
-        if not all_polys:
-            raise ValueError("Nessun tratto da esportare.")
-        slot_polys = [
-            self._space.canvas_points_to_slot_local_pt(poly, slot_index=0)
-            for poly in all_polys
-        ]
-        slot_center = self._space.canvas_points_to_slot_local_pt(
-            [self.cfg.center], slot_index=0
-        )[0]
-        export_cfg = replace(self.cfg, center=slot_center)
-        export_composition_bundle(
-            slot_polys,
-            out_dir,
+        export_canvas_bundle(
+            self._active_polylines(),
+            space=self._space,
+            cfg=self.cfg,
             page=self.page,
             rows=self.rows,
             cols=self.cols,
             gutter_pt=self.gutter_pt,
-            dpi=150,
-            include_pdf=(fmt == "pdf"),
-            config=export_cfg,
-            budget_config=self.budget_cfg,
+            budget_cfg=self.budget_cfg,
             cache=self.cache,
-            single_page_group=(self.rows == 1 and self.cols == 1),
+            fmt=fmt,
+            out_dir=out_dir,
         )
 
     def _draw_styled_stroke(self, st: StyledStroke) -> None:
